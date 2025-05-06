@@ -39,7 +39,7 @@
             width: 100px;
             height: 100px;
             background-size: 300px 300px;
-            transition: transform 0.2s ease;
+            transition: all 0.3s ease;
             touch-action: none;
             user-select: none;
             box-sizing: border-box;
@@ -105,6 +105,7 @@
             let emptyPos = { row: ROWS-1, col: COLS-1 };
             let moves = 0;
             let gameStarted = false;
+            let currentPiece = null;
             
             // Elementos del DOM
             const puzzleContainer = document.getElementById('puzzle-container');
@@ -137,15 +138,13 @@
                         piece.dataset.value = pieceNumber;
                         
                         // Posicionar y asignar fondo
-                        piece.style.left = `${col * PIECE_SIZE}px`;
-                        piece.style.top = `${row * PIECE_SIZE}px`;
+                        updatePiecePosition(piece, row, col);
                         piece.style.backgroundImage = `url(${IMAGE_URL})`;
                         piece.style.backgroundPosition = `-${col * PIECE_SIZE}px -${row * PIECE_SIZE}px`;
                         
                         // Eventos táctiles
                         piece.addEventListener('touchstart', handleTouchStart, { passive: false });
-                        piece.addEventListener('touchmove', handleTouchMove, { passive: false });
-                        piece.addEventListener('touchend', handleTouchEnd);
+                        piece.addEventListener('click', handleClick); // Para probar en desktop también
                         
                         puzzleContainer.appendChild(piece);
                         board[row][col] = piece;
@@ -157,70 +156,37 @@
                 updateMovesCounter();
             }
             
-            // Variables para el control táctil
-            let touchStartX, touchStartY;
-            let currentPiece = null;
+            function updatePiecePosition(piece, row, col) {
+                piece.style.left = `${col * PIECE_SIZE}px`;
+                piece.style.top = `${row * PIECE_SIZE}px`;
+                piece.dataset.row = row;
+                piece.dataset.col = col;
+            }
             
             function handleTouchStart(e) {
                 e.preventDefault();
-                const touch = e.touches[0];
-                touchStartX = touch.clientX;
-                touchStartY = touch.clientY;
                 currentPiece = e.target;
+                tryMovePiece(currentPiece);
             }
             
-            function handleTouchMove(e) {
-                if (!currentPiece) return;
-                e.preventDefault();
-                
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - touchStartX;
-                const deltaY = touch.clientY - touchStartY;
-                
-                // Mover la pieza temporalmente para el efecto de arrastre
-                currentPiece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            function handleClick(e) {
+                currentPiece = e.target;
+                tryMovePiece(currentPiece);
             }
             
-            function handleTouchEnd(e) {
-                if (!currentPiece) return;
+            function tryMovePiece(piece) {
+                if (!piece) return;
                 
-                // Restablecer transformación
-                currentPiece.style.transform = '';
+                const row = parseInt(piece.dataset.row);
+                const col = parseInt(piece.dataset.col);
                 
-                const touch = e.changedTouches[0];
-                const deltaX = touch.clientX - touchStartX;
-                const deltaY = touch.clientY - touchStartY;
-                
-                // Determinar dirección del deslizamiento
-                const row = parseInt(currentPiece.dataset.row);
-                const col = parseInt(currentPiece.dataset.col);
-                
-                // Umbral para considerar un deslizamiento válido (30px)
-                if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                    if (Math.abs(deltaX) > 30) {
-                        // Deslizamiento horizontal
-                        if (deltaX > 0 && col > 0 && board[row][col-1] === null) {
-                            // Deslizar a la derecha (espacio vacío a la izquierda)
-                            movePiece(row, col, row, col-1);
-                        } else if (deltaX < 0 && col < COLS-1 && board[row][col+1] === null) {
-                            // Deslizar a la izquierda (espacio vacío a la derecha)
-                            movePiece(row, col, row, col+1);
-                        }
-                    }
-                } else {
-                    if (Math.abs(deltaY) > 30) {
-                        // Deslizamiento vertical
-                        if (deltaY > 0 && row > 0 && board[row-1][col] === null) {
-                            // Deslizar hacia abajo (espacio vacío arriba)
-                            movePiece(row, col, row-1, col);
-                        } else if (deltaY < 0 && row < ROWS-1 && board[row+1][col] === null) {
-                            // Deslizar hacia arriba (espacio vacío abajo)
-                            movePiece(row, col, row+1, col);
-                        }
-                    }
+                // Verificar si la pieza está adyacente al espacio vacío
+                if ((Math.abs(row - emptyPos.row) === 1 && col === emptyPos.col) || 
+                    (Math.abs(col - emptyPos.col) === 1 && row === emptyPos.row)) {
+                    
+                    // Mover la pieza al espacio vacío
+                    movePiece(row, col, emptyPos.row, emptyPos.col);
                 }
-                
-                currentPiece = null;
             }
             
             function movePiece(fromRow, fromCol, toRow, toCol) {
@@ -231,10 +197,7 @@
                 board[toRow][toCol] = piece;
                 
                 // Actualizar posición en el DOM
-                piece.style.left = `${toCol * PIECE_SIZE}px`;
-                piece.style.top = `${toRow * PIECE_SIZE}px`;
-                piece.dataset.row = toRow;
-                piece.dataset.col = toCol;
+                updatePiecePosition(piece, toRow, toCol);
                 
                 emptyPos = { row: fromRow, col: fromCol };
                 moves++;
@@ -253,10 +216,10 @@
                     const { row, col } = emptyPos;
                     
                     // Encontrar movimientos posibles
-                    if (row > 0) possibleMoves.push({ dir: 'down', row: row-1, col });
-                    if (row < ROWS-1) possibleMoves.push({ dir: 'up', row: row+1, col });
-                    if (col > 0) possibleMoves.push({ dir: 'right', row, col: col-1 });
-                    if (col < COLS-1) possibleMoves.push({ dir: 'left', row, col: col+1 });
+                    if (row > 0) possibleMoves.push({ row: row-1, col });
+                    if (row < ROWS-1) possibleMoves.push({ row: row+1, col });
+                    if (col > 0) possibleMoves.push({ row, col: col-1 });
+                    if (col < COLS-1) possibleMoves.push({ row, col: col+1 });
                     
                     // Elegir un movimiento aleatorio
                     const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
@@ -276,8 +239,7 @@
                         
                         const piece = board[row][col];
                         if (!piece || 
-                            parseInt(piece.dataset.row) !== row || 
-                            parseInt(piece.dataset.col) !== col) {
+                            parseInt(piece.dataset.value) !== row * COLS + col) {
                             return false;
                         }
                     }
