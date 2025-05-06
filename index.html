@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rompecabezas del Amor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #ffebee;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            color: #d32f2f;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        #puzzle-container {
+            width: 300px;
+            height: 300px;
+            position: relative;
+            margin: 0 auto;
+            border: 2px solid #d32f2f;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .puzzle-piece {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-size: 300px 300px;
+            transition: transform 0.2s ease;
+            touch-action: none;
+            user-select: none;
+            box-sizing: border-box;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        #controls {
+            margin: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        #message {
+            margin: 20px;
+            padding: 15px;
+            background-color: #f8bbd0;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 300px;
+            display: none;
+        }
+        
+        #moves-counter {
+            margin: 10px;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rompecabezas del Amor</h1>
+    <div id="moves-counter">Movimientos: 0</div>
+    <div id="puzzle-container"></div>
+    <div id="controls">
+        <button id="shuffle-btn">Mezclar</button>
+        <button id="hint-btn">Pista</button>
+    </div>
+    <div id="message"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuración del juego
+            const ROWS = 3;
+            const COLS = 3;
+            const PIECE_SIZE = 100;
+            const CONTAINER_SIZE = 300;
+            
+            // Imagen personalizada (reemplaza con tu URL)
+            const IMAGE_URL = 'https://ejemplo.com/tu-foto.jpg';
+            
+            // Estado del juego
+            let board = [];
+            let emptyPos = { row: ROWS-1, col: COLS-1 };
+            let moves = 0;
+            let gameStarted = false;
+            
+            // Elementos del DOM
+            const puzzleContainer = document.getElementById('puzzle-container');
+            const shuffleBtn = document.getElementById('shuffle-btn');
+            const hintBtn = document.getElementById('hint-btn');
+            const messageDiv = document.getElementById('message');
+            const movesCounter = document.getElementById('moves-counter');
+            
+            // Inicializar el tablero
+            function initializeBoard() {
+                puzzleContainer.innerHTML = '';
+                board = [];
+                
+                // Crear piezas numeradas (la última es el espacio vacío)
+                for (let row = 0; row < ROWS; row++) {
+                    board[row] = [];
+                    for (let col = 0; col < COLS; col++) {
+                        const pieceNumber = row * COLS + col;
+                        
+                        // La última pieza es el espacio vacío
+                        if (row === ROWS-1 && col === COLS-1) {
+                            board[row][col] = null;
+                            continue;
+                        }
+                        
+                        const piece = document.createElement('div');
+                        piece.className = 'puzzle-piece';
+                        piece.dataset.row = row;
+                        piece.dataset.col = col;
+                        piece.dataset.value = pieceNumber;
+                        
+                        // Posicionar y asignar fondo
+                        piece.style.left = `${col * PIECE_SIZE}px`;
+                        piece.style.top = `${row * PIECE_SIZE}px`;
+                        piece.style.backgroundImage = `url(${IMAGE_URL})`;
+                        piece.style.backgroundPosition = `-${col * PIECE_SIZE}px -${row * PIECE_SIZE}px`;
+                        
+                        // Eventos táctiles
+                        piece.addEventListener('touchstart', handleTouchStart, { passive: false });
+                        piece.addEventListener('touchmove', handleTouchMove, { passive: false });
+                        piece.addEventListener('touchend', handleTouchEnd);
+                        
+                        puzzleContainer.appendChild(piece);
+                        board[row][col] = piece;
+                    }
+                }
+                
+                emptyPos = { row: ROWS-1, col: COLS-1 };
+                moves = 0;
+                updateMovesCounter();
+            }
+            
+            // Variables para el control táctil
+            let touchStartX, touchStartY;
+            let currentPiece = null;
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                currentPiece = e.target;
+            }
+            
+            function handleTouchMove(e) {
+                if (!currentPiece) return;
+                e.preventDefault();
+                
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - touchStartX;
+                const deltaY = touch.clientY - touchStartY;
+                
+                // Mover la pieza temporalmente para el efecto de arrastre
+                currentPiece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            }
+            
+            function handleTouchEnd(e) {
+                if (!currentPiece) return;
+                
+                // Restablecer transformación
+                currentPiece.style.transform = '';
+                
+                const touch = e.changedTouches[0];
+                const deltaX = touch.clientX - touchStartX;
+                const deltaY = touch.clientY - touchStartY;
+                
+                // Determinar dirección del deslizamiento
+                const row = parseInt(currentPiece.dataset.row);
+                const col = parseInt(currentPiece.dataset.col);
+                
+                // Umbral para considerar un deslizamiento válido (30px)
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    if (Math.abs(deltaX) > 30) {
+                        // Deslizamiento horizontal
+                        if (deltaX > 0 && col > 0 && board[row][col-1] === null) {
+                            // Deslizar a la derecha (espacio vacío a la izquierda)
+                            movePiece(row, col, row, col-1);
+                        } else if (deltaX < 0 && col < COLS-1 && board[row][col+1] === null) {
+                            // Deslizar a la izquierda (espacio vacío a la derecha)
+                            movePiece(row, col, row, col+1);
+                        }
+                    }
+                } else {
+                    if (Math.abs(deltaY) > 30) {
+                        // Deslizamiento vertical
+                        if (deltaY > 0 && row > 0 && board[row-1][col] === null) {
+                            // Deslizar hacia abajo (espacio vacío arriba)
+                            movePiece(row, col, row-1, col);
+                        } else if (deltaY < 0 && row < ROWS-1 && board[row+1][col] === null) {
+                            // Deslizar hacia arriba (espacio vacío abajo)
+                            movePiece(row, col, row+1, col);
+                        }
+                    }
+                }
+                
+                currentPiece = null;
+            }
+            
+            function movePiece(fromRow, fromCol, toRow, toCol) {
+                if (!gameStarted) gameStarted = true;
+                
+                const piece = board[fromRow][fromCol];
+                board[fromRow][fromCol] = null;
+                board[toRow][toCol] = piece;
+                
+                // Actualizar posición en el DOM
+                piece.style.left = `${toCol * PIECE_SIZE}px`;
+                piece.style.top = `${toRow * PIECE_SIZE}px`;
+                piece.dataset.row = toRow;
+                piece.dataset.col = toCol;
+                
+                emptyPos = { row: fromRow, col: fromCol };
+                moves++;
+                updateMovesCounter();
+                
+                // Verificar si el puzzle está resuelto
+                if (checkWin()) {
+                    showMessage('¡Lo lograste! Eres tan inteligente como hermosa ❤️');
+                }
+            }
+            
+            function shufflePieces() {
+                // Realizar 200 movimientos aleatorios para mezclar
+                for (let i = 0; i < 200; i++) {
+                    const possibleMoves = [];
+                    const { row, col } = emptyPos;
+                    
+                    // Encontrar movimientos posibles
+                    if (row > 0) possibleMoves.push({ dir: 'down', row: row-1, col });
+                    if (row < ROWS-1) possibleMoves.push({ dir: 'up', row: row+1, col });
+                    if (col > 0) possibleMoves.push({ dir: 'right', row, col: col-1 });
+                    if (col < COLS-1) possibleMoves.push({ dir: 'left', row, col: col+1 });
+                    
+                    // Elegir un movimiento aleatorio
+                    const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                    movePiece(move.row, move.col, emptyPos.row, emptyPos.col);
+                }
+                
+                moves = 0;
+                gameStarted = false;
+                updateMovesCounter();
+                messageDiv.style.display = 'none';
+            }
+            
+            function checkWin() {
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        if (row === ROWS-1 && col === COLS-1) continue;
+                        
+                        const piece = board[row][col];
+                        if (!piece || 
+                            parseInt(piece.dataset.row) !== row || 
+                            parseInt(piece.dataset.col) !== col) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            function showMessage(msg) {
+                messageDiv.textContent = msg;
+                messageDiv.style.display = 'block';
+            }
+            
+            function updateMovesCounter() {
+                movesCounter.textContent = `Movimientos: ${moves}`;
+            }
+            
+            function showHint() {
+                if (checkWin()) return;
+                
+                // Parpadear las piezas que están en la posición incorrecta
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        const piece = board[row][col];
+                        if (piece) {
+                            const correctRow = Math.floor(piece.dataset.value / COLS);
+                            const correctCol = piece.dataset.value % COLS;
+                            
+                            if (parseInt(piece.dataset.row) !== correctRow || 
+                                parseInt(piece.dataset.col) !== correctCol) {
+                                piece.style.boxShadow = '0 0 15px 5px rgba(255, 255, 0, 0.7)';
+                                setTimeout(() => {
+                                    piece.style.boxShadow = 'none';
+                                }, 1000);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Event listeners
+            shuffleBtn.addEventListener('click', shufflePieces);
+            hintBtn.addEventListener('click', showHint);
+            
+            // Iniciar el juego
+            initializeBoard();
+            shufflePieces();
+        });
+    </script>
+</body>
+</html>
