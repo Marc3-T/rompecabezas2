@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>❤️❤️❤️❤️❤️</title>
+    <title>Rompecabezas del Amor</title>
     <style>
         body {
             margin: 0;
@@ -80,46 +80,46 @@
     </style>
 </head>
 <body>
-    <h1>❤️❤️❤️❤️❤️</h1>
-    
+    <h1>Rompecabezas del Amor</h1>
+    <div id="moves-counter">Movimientos: 0</div>
     <div id="puzzle-container"></div>
     <div id="controls">
         <button id="shuffle-btn">Mezclar</button>
-        
+        <button id="hint-btn">Pista</button>
     </div>
     <div id="message"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            
+            // Configuración del juego
             const ROWS = 3;
             const COLS = 3;
             const PIECE_SIZE = 100;
             const CONTAINER_SIZE = 300;
             
-            
+            // Imagen personalizada (reemplaza con tu URL)
             const IMAGE_URL = 'fotoo.jpg';
             
-            
+            // Estado del juego
             let board = [];
             let emptyPos = { row: ROWS-1, col: COLS-1 };
             let moves = 0;
             let gameStarted = false;
             let currentPiece = null;
             
-            
+            // Elementos del DOM
             const puzzleContainer = document.getElementById('puzzle-container');
             const shuffleBtn = document.getElementById('shuffle-btn');
             const hintBtn = document.getElementById('hint-btn');
             const messageDiv = document.getElementById('message');
             const movesCounter = document.getElementById('moves-counter');
             
-            
+            // Inicializar el tablero
             function initializeBoard() {
                 puzzleContainer.innerHTML = '';
                 board = [];
                 
-                
+                // Crear piezas numeradas (la última es el espacio vacío)
                 for (let row = 0; row < ROWS; row++) {
                     board[row] = [];
                     for (let col = 0; col < COLS; col++) {
@@ -137,12 +137,12 @@
                         piece.dataset.col = col;
                         piece.dataset.value = pieceNumber;
                         
-                        
+                        // Posicionar y asignar fondo
                         updatePiecePosition(piece, row, col);
                         piece.style.backgroundImage = `url(${IMAGE_URL})`;
                         piece.style.backgroundPosition = `-${col * PIECE_SIZE}px -${row * PIECE_SIZE}px`;
                         
-                        
+                        // Eventos táctiles
                         piece.addEventListener('touchstart', handleTouchStart, { passive: false });
                         piece.addEventListener('click', handleClick); // Para probar en desktop también
                         
@@ -180,11 +180,11 @@
                 const row = parseInt(piece.dataset.row);
                 const col = parseInt(piece.dataset.col);
                 
-                
+                // Verificar si la pieza está adyacente al espacio vacío
                 if ((Math.abs(row - emptyPos.row) === 1 && col === emptyPos.col) || 
                     (Math.abs(col - emptyPos.col) === 1 && row === emptyPos.row)) {
                     
-                    
+                    // Mover la pieza al espacio vacío
                     movePiece(row, col, emptyPos.row, emptyPos.col);
                 }
             }
@@ -196,32 +196,32 @@
                 board[fromRow][fromCol] = null;
                 board[toRow][toCol] = piece;
                 
-                
+                // Actualizar posición en el DOM
                 updatePiecePosition(piece, toRow, toCol);
                 
                 emptyPos = { row: fromRow, col: fromCol };
                 moves++;
                 updateMovesCounter();
                 
-                
+                // Verificar si el puzzle está resuelto
                 if (checkWin()) {
-                    showMessage('Sabía que lo lograrías mi princesa hermosa, eres la mejor, TE AMO ❤️');
+                    showMessage('¡Lo lograste! Eres tan inteligente como hermosa ❤️');
                 }
             }
             
             function shufflePieces() {
-                
+                // Realizar 200 movimientos aleatorios para mezclar
                 for (let i = 0; i < 200; i++) {
                     const possibleMoves = [];
                     const { row, col } = emptyPos;
                     
-                    
+                    // Encontrar movimientos posibles
                     if (row > 0) possibleMoves.push({ row: row-1, col });
                     if (row < ROWS-1) possibleMoves.push({ row: row+1, col });
                     if (col > 0) possibleMoves.push({ row, col: col-1 });
                     if (col < COLS-1) possibleMoves.push({ row, col: col+1 });
                     
-                    
+                    // Elegir un movimiento aleatorio
                     const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
                     movePiece(move.row, move.col, emptyPos.row, emptyPos.col);
                 }
@@ -259,7 +259,7 @@
             function showHint() {
                 if (checkWin()) return;
                 
-                
+                // Parpadear las piezas que están en la posición incorrecta
                 for (let row = 0; row < ROWS; row++) {
                     for (let col = 0; col < COLS; col++) {
                         const piece = board[row][col];
@@ -279,11 +279,11 @@
                 }
             }
             
-            
+            // Event listeners
             shuffleBtn.addEventListener('click', shufflePieces);
             hintBtn.addEventListener('click', showHint);
             
-            
+            // Iniciar el juego
             initializeBoard();
             shufflePieces();
         });
